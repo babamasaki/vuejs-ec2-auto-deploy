@@ -78,6 +78,10 @@ jobs:
             sudo chown -R nginx:nginx /var/www/vueapp
 
       # Nginx設定ファイルをEC2に送信
+      - name: List files in config directory
+        run: ls -la config/
+
+      # Nginx設定ファイルをEC2に送信
       - name: Upload nginx config to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
