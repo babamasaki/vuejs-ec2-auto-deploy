@@ -36,6 +36,11 @@ jobs:
           npm ci
           npm run build
 
+      # テスト用コード(working directoryの確認)
+      - name: List files in dist
+        working-directory: external-src
+        run: ls -R dist
+
       # ⑤ dist を EC2 に送信
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
