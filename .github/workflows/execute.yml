@@ -3,7 +3,7 @@ name: Deploy Vue.js app to EC2
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   deploy:
@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: babamasaki/user-management-vuejs
-          ref: main
+          ref: master
           path: external-src
 
       # ③ Node.js セットアップ
