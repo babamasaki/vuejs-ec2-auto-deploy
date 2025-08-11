@@ -36,11 +36,6 @@ jobs:
           npm ci
           npm run build
 
-      # テスト用コード(working directoryの確認)
-      - name: List files in dist
-        working-directory: external-src
-        run: ls -R dist
-
       # ⑤ dist を EC2 に送信
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -48,7 +43,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "external-src/dist/*"
+          source: "external-src/dist/**"
           target: "/tmp/dist"
 
       # ⑥ EC2 で Nginx 設定 & デプロイ
@@ -63,7 +58,7 @@ jobs:
             sudo systemctl enable nginx
             sudo systemctl start nginx
             sudo mkdir -p /var/www/vueapp
-            sudo cp -r /tmp/dist/* /var/www/vueapp
+            sudo cp -r /tmp/dist/external-src/dist/* /var/www/vueapp
             sudo chown -R nginx:nginx /var/www/vueapp
             sudo tee /etc/nginx/conf.d/vueapp.conf > /dev/null <<'EOF'
             server {
