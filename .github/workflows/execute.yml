@@ -43,7 +43,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "external-src/dist/**"
+          source: "external-src/dist/*"
           target: "/tmp/dist"
 
       # ⑥ EC2 で Nginx 設定 & デプロイ
