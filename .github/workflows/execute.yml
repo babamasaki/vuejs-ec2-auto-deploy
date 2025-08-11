@@ -77,7 +77,7 @@ jobs:
             sudo cp -r /tmp/dist/external-src/dist/* /var/www/vueapp
             sudo chown -R nginx:nginx /var/www/vueapp
 
-      # Nginx設定ファイル作成
+      # Nginx設定ファイルをEC2に送信
       - name: Upload nginx config to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -85,7 +85,17 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "config/vueapp.conf"
-          target: "/etc/nginx/conf.d/vueapp.conf"
+          target: "/tmp"
+
+      # Nginx設定ファイルを配置
+      - name: Move config file and restart nginx
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo cp /tmp/vueapp.conf /etc/nginx/conf.d/vueapp.conf
 
       # Nginx設定確認と再起動
       - name: Reload Nginx
