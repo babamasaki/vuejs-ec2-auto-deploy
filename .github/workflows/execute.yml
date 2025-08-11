@@ -1,6 +1,7 @@
 name: Deploy Vue.js app to EC2
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
