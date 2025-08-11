@@ -77,6 +77,10 @@ jobs:
             sudo cp -r /tmp/dist/external-src/dist/* /var/www/vueapp
             sudo chown -R nginx:nginx /var/www/vueapp
 
+      # リポジトリを取得
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       # Nginx設定ファイルをEC2に送信
       - name: List files in config directory
         run: ls -la config/
