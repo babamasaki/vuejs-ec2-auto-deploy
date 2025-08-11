@@ -11,11 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ① メインリポジトリのコードを取得
-      - name: Checkout main repo
-        uses: actions/checkout@v4
-
-      # ② 別のパブリックリポジトリを取得
+      # リポジトリを取得
       - name: Checkout external repo
         uses: actions/checkout@v4
         with:
