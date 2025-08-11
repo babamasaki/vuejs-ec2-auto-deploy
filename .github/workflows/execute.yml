@@ -7,9 +7,8 @@ on:
       - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
     steps:
       # リポジトリを取得
       - name: Checkout external repo
@@ -32,6 +31,10 @@ jobs:
           npm ci
           npm run build
 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
       # distをEC2に送信
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
