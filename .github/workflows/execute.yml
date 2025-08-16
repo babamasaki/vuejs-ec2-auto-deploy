@@ -9,10 +9,23 @@ on:
       - develop
 
 jobs:
-  deploy-prod:
-    if: github.ref == 'refs/heads/main'
+  deploy:
     runs-on: ubuntu-latest
-    environment: production
+    strategy:
+      matrix:
+        include:
+          - branch: main
+            env_name: production
+            host: ${{ secrets.EC2_HOST }}
+          - branch: staging
+            env_name: staging
+            host: ${{ secrets.EC2_HOST_STAGING }}
+          - branch: develop
+            env_name: develop
+            host: ${{ secrets.EC2_HOST_DEVELOP }}
+
+    if: github.ref == format('refs/heads/{0}', matrix.branch)
+    environment: ${{ matrix.env_name }}
 
     steps:
       # リポジトリを取得
@@ -40,7 +53,7 @@ jobs:
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ matrix.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "external-src/dist/**"
@@ -50,7 +63,7 @@ jobs:
       - name: Install and start Nginx
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ matrix.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -89,7 +102,7 @@ jobs:
       - name: Upload nginx config to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ matrix.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "config/vueapp.conf"
@@ -99,7 +112,7 @@ jobs:
       - name: Move config file and restart nginx
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.EC2_HOST }}
+          host: ${{ matrix.host }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
@@ -116,216 +129,3 @@ jobs:
             sudo nginx -t
             sudo systemctl restart nginx
 
-  deploy-staging:
-    if: github.ref == 'refs/heads/staging'
-    runs-on: ubuntu-latest
-    environment: staging
-
-    steps:
-      # リポジトリを取得
-      - name: Checkout external repo (staging)
-        uses: actions/checkout@v4
-        with:
-          repository: babamasaki/user-management-vuejs
-          ref: master
-          path: external-src
-
-      # Node.js セットアップ
-      - name: Setup Node.js (staging)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      # 依存インストール&ビルド
-      - name: Install dependencies & Build (staging)
-        working-directory: external-src
-        run: |
-          npm ci
-          npm run build
-
-      # distをEC2に送信
-      - name: Copy files to EC2 (staging)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "external-src/dist/**"
-          target: "/tmp/dist"
-
-      # Nginxインストールと起動
-      - name: Install and start Nginx (staging)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo yum install -y nginx
-            sudo systemctl enable nginx
-            sudo systemctl start nginx
-      
-        # Nginx状態確認
-      - name: Check Nginx Service Status (staging)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo systemctl is-enabled nginx
-            sudo systemctl status nginx
-
-      # 配置ディレクトリ作成とファイルコピー
-      - name: Deploy on EC2 (staging)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo mkdir -p /var/www/vueapp
-            sudo cp -r /tmp/dist/external-src/dist/* /var/www/vueapp
-            sudo chown -R nginx:nginx /var/www/vueapp
-
-      # リポジトリを取得
-      - name: Checkout code (staging)
-        uses: actions/checkout@v4
-
-      # Nginx設定ファイルをEC2に送信
-      - name: Upload nginx config to EC2 (staging)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "config/vueapp.conf"
-          target: "/tmp"
-
-      # Nginx設定ファイルを配置
-      - name: Move config file and restart nginx (staging)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo cp /tmp/config/vueapp.conf /etc/nginx/conf.d/vueapp.conf
-
-      # Nginx設定確認と再起動
-      - name: Reload Nginx (staging)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_STAGING }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo nginx -t
-            sudo systemctl restart nginx
-
-  deploy-develop:
-    if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
-    environment: develop
-
-    steps:
-      # リポジトリを取得
-      - name: Checkout external repo (develop)
-        uses: actions/checkout@v4
-        with:
-          repository: babamasaki/user-management-vuejs
-          ref: master
-          path: external-src
-
-      # Node.js セットアップ
-      - name: Setup Node.js (develop)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      # 依存インストール&ビルド
-      - name: Install dependencies & Build (develop)
-        working-directory: external-src
-        run: |
-          npm ci
-          npm run build
-
-      # distをEC2に送信
-      - name: Copy files to EC2 (develop)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "external-src/dist/**"
-          target: "/tmp/dist"
-
-      # Nginxインストールと起動
-      - name: Install and start Nginx (develop)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo yum install -y nginx
-            sudo systemctl enable nginx
-            sudo systemctl start nginx
-      
-        # Nginx状態確認
-      - name: Check Nginx Service Status (develop)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo systemctl is-enabled nginx
-            sudo systemctl status nginx
-
-      # 配置ディレクトリ作成とファイルコピー
-      - name: Deploy on EC2 (develop)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo mkdir -p /var/www/vueapp
-            sudo cp -r /tmp/dist/external-src/dist/* /var/www/vueapp
-            sudo chown -R nginx:nginx /var/www/vueapp
-
-      # リポジトリを取得
-      - name: Checkout code (develop)
-        uses: actions/checkout@v4
-
-      # Nginx設定ファイルをEC2に送信
-      - name: Upload nginx config to EC2 (develop)
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "config/vueapp.conf"
-          target: "/tmp"
-
-      # Nginx設定ファイルを配置
-      - name: Move config file and restart nginx (develop)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo cp /tmp/config/vueapp.conf /etc/nginx/conf.d/vueapp.conf
-
-      # Nginx設定確認と再起動
-      - name: Reload Nginx (develop)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST_DEVELOP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            sudo nginx -t
-            sudo systemctl restart nginx
