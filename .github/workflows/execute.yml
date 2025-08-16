@@ -24,7 +24,6 @@ jobs:
             env_name: develop
             host_key: EC2_HOST_DEVELOP
 
-    if: ${{ github.ref == format('refs/heads/{0}', matrix.branch) }}
     environment: ${{ matrix.env_name }}
 
     steps:
