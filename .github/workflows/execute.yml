@@ -52,6 +52,7 @@ jobs:
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
+          if: ${{ github.ref == format('refs/heads/{0}', matrix.branch) }}
           host: ${{ secrets[matrix.host_key] }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
