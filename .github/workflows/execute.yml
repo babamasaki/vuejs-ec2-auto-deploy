@@ -39,8 +39,12 @@ jobs:
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
-          # host: ${{ secrets.EC2_HOST }}
-          host: ${{ github.ref == 'refs/heads/main' && secrets.EC2_HOST || github.ref == 'refs/heads/staging' && secrets.EC2_HOST_STAGING || secrets.EC2_HOST_DEVELOP }}
+          host: >-
+            ${{ 
+              github.ref == 'refs/heads/main' && secrets.EC2_HOST || 
+              github.ref == 'refs/heads/staging' && secrets.EC2_HOST_STAGING || 
+              secrets.EC2_HOST_DEVELOP 
+            }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "external-src/dist/**"
